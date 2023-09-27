@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 import config
+from typing import List
 from phtrs import str_util
 from features import *
 
@@ -139,6 +142,24 @@ def base_rule(inpt: str, outpt: str) -> SegRule:
 
     rule = SegRule(tuple(A), tuple(B), tuple(C), tuple(D))
     return rule
+
+
+def unit_base_rules(inpt: str, outpt: str) -> List[SegRule]:
+    """
+    Learn word-specific rule A -> B / C __D by aligning input and output strings
+    """
+    inpt = inpt.split(' ')
+    outpt = outpt.split(' ')
+
+    rules = []
+    for i, (A, B) in enumerate(zip(inpt, outpt)):
+        if A == B:
+            continue
+        C = [char for char in inpt[:i] if char != '∅']
+        D = [char for char in inpt[i+1:] if char != '∅']
+        rules.append(SegRule(tuple([A]), tuple([B]), tuple(C), tuple(D)))
+
+    return rules
 
 
 def cross_contexts(R_base):

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from functools import lru_cache
 
 from features import common_ftrs
@@ -19,9 +21,9 @@ def generalize_rules_rec(R):
             R_base[change].append(rule)
         else:
             R_base[change] = [rule]
-    R_base = {change: set(rules)  \
+    R_base = {change: set(rules) \
                 for change, rules in R_base.items()}
-    R_all = {change: rules.copy()  \
+    R_all = {change: rules.copy() \
                 for change, rules in R_base.items()}
 
     # First-step minimal generalization

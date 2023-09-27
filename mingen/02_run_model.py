@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Ex. python 02_run_model.py --language eng --learn_rules --score_rules --prune_rules --rate_wugs
 
 # todo: scalar features, phonology, impugnment, ...
@@ -6,110 +7,43 @@ import configargparse, pickle, sys
 from pathlib import Path
 import pandas as pd
 
-sys.path.append(str(Path.cwd() / '../../phtrs'))
-
 import config
 from features import *
 from rules import *
 import mingen
 import scoring
 import pruning
-import wug_testing
-import near_miss
 from phtrs import config as phon_config
 
 
-def main():
-    parser = configargparse.ArgParser(
-        config_file_parser_class=configargparse.YAMLConfigFileParser)
-    parser.add(
-        '--language',
-        type=str,
-        choices=['eng', 'eng2', 'eng3', 'deu', 'nld', 'tiny'],
-        default='tiny')
-    parser.add( \
-        '--learn_rules', \
-        action='store_true', \
-        default=False, \
-        help='recursive minimal generalization')
-    parser.add( \
-        '--cross_contexts', \
-        action='store_true', \
-        default=False, \
-        help='make cross-context base rules (aka dopplegangers)')
-    parser.add( \
-        '--score_rules', \
-        action='store_true', \
-        default=False,
-        help='confidence or accuracy')
-    parser.add(
-        '--prune_rules',
-        action='store_true', \
-        default=False,
-        help='maximal rules by generality, score, and length')
-    parser.add(
-        '--rate_wugs',
-        action='store_true', \
-        default=False,
-        help='wug test with pruned rules')
-    parser.add(
-        '--score_type',
-        type=str,
-        choices=['confidence', 'accuracy'],
-        default='confidence')
-    parser.add( \
-        '--accuracy_smooth', \
-        type=float, \
-        default=10.0, \
-        help='denominator for smoothed accuracy')
-    parser.add( \
-        '--near_miss', \
-        action='store_true', \
-        default=False, \
-        help='generate wug items just beyond the scope of (English) irregular rules')
-
-    args = parser.parse_args()
-    LANGUAGE = args.language
+def generate_rules(args, lang=None):
+    LANG_FAMILY = args.language_family
+    LANGUAGE = args.language if lang is None else lang
     SCORE_TYPE = args.score_type
     if SCORE_TYPE == 'accuracy':
         s0 = args.accuracy_smooth
         SCORE_TYPE = f'accuracy{s0}'
 
-    # Import config (as created by 01_prepare_data)
-    #config_save = pickle.load( # bug in reading older pkl files
-    #    open(Path('../data') / f'{LANGUAGE}_config.pkl', 'rb'))
-    config_save = pd.read_pickle(
-        open(Path('../data') / f'{LANGUAGE}_config.pkl', 'rb'))
-    for key, val in config_save.items():
-        setattr(config, key, val)
-    phon_config.init(config_save)
+    OUT_DIR = Path(args.out_dir)
 
-    #pruning.test()
-    #sys.exit(0)
-
-    # Quick examples xxx move to utils file
-    if 0:
-        t_ftrs = config.sym2ftr_vec['t']
-        print(ftrs2str1(t_ftrs))
-        l_ftrs = config.sym2ftr_vec['l']
-        tl_ftrs, _ = common_ftrs(t_ftrs, l_ftrs)
-        print(tl_ftrs)
-        print(ftrs2str1(tl_ftrs))
-        sys.exit(0)
+    print(f"processing language {LANGUAGE}")
 
     # Make word-specific (base) rules, apply recursive minimal generalization
     if args.learn_rules:
         dat_train = config.dat_train
+        if LANGUAGE not in dat_train['language'].unique():
+            raise ValueError(f"language {LANGUAGE} cannot be found in train data")
+        dat_train = dat_train[dat_train['language'] == LANGUAGE]
         print('Base rules ...')
-        R_base = [base_rule(w1, w2) for (w1, w2) \
-            in zip(dat_train['stem'], dat_train['output'])]
+        # R_base = [base_rule(w1, w2) for (w1, w2) in zip(dat_train['stem'], dat_train['output'])]
+        R_base = [rule for (w1, w2) in zip(dat_train['stem'], dat_train['output']) for rule in unit_base_rules(w1, w2)]
 
         if args.cross_contexts:
             R_base = cross_contexts(R_base)
 
         base_rules = pd.DataFrame({'rule': [str(rule) for rule in R_base]})
         base_rules.to_csv(
-            Path('../data') / f'{LANGUAGE}_rules_base.tsv',
+            OUT_DIR / f'{LANG_FAMILY}/{LANGUAGE}_rules_base.tsv',
             index=False,
             sep='\t')
 
@@ -124,30 +58,26 @@ def main():
         rules['rule_regex'] = [repr(rule) for rule in R_all]
         rules['rule_len'] = [len(x) for x in rules['rule']]
         rules.to_csv(
-            Path('../data') / f'{LANGUAGE}_rules_out.tsv',
+            OUT_DIR / f'{LANG_FAMILY}/{LANGUAGE}_rules_out.tsv',
             index=False,
             sep='\t')
 
-    # Compute hits and scope and for each learned rule
-    if args.learn_rules:
-        rules = pd.read_csv(
-            Path('../data') / f'{LANGUAGE}_rules_out.tsv', sep='\t')
-
+        # Compute hits and scope and for each learned rule
         # Hit and scope on train data
         R_all = [FtrRule.from_str(rule) for rule in rules['rule']]
-        hits_all, scope_all = scoring.score_rules(R_all)
+        hits_all, scope_all = scoring.score_rules(R_all, lang=LANGUAGE)
         rules['hits'] = hits_all
         rules['scope'] = scope_all
 
         rules.to_csv(
-            Path('../data') / f'{LANGUAGE}_rules_scored.tsv',
+            OUT_DIR / f'{LANG_FAMILY}/{LANGUAGE}_rules_scored.tsv',
             sep='\t',
             index=False)
 
     # Score rules for confidence or accuracy
     if args.score_rules:
         rules = pd.read_csv(
-            Path('../data') / f'{LANGUAGE}_rules_scored.tsv', sep='\t')
+            OUT_DIR / f'{LANG_FAMILY}/{LANGUAGE}_rules_scored.tsv', sep='\t')
 
         # Confidence
         # todo: adjustable alpha
@@ -162,52 +92,90 @@ def main():
                 for (h, s) in zip(rules['hits'], rules['scope'])]
 
         rules.to_csv(
-            Path('../data') / f'{LANGUAGE}_rules_scored.tsv',
+            OUT_DIR / f'{LANG_FAMILY}/{LANGUAGE}_rules_scored.tsv',
             sep='\t',
             index=False)
 
     # Prune rules that are bounded by more general rules or have scores <= 0
     if args.prune_rules:
         rules = pd.read_csv(
-            Path('../data') / f'{LANGUAGE}_rules_scored.tsv', sep='\t')
+            OUT_DIR / f'{LANG_FAMILY}/{LANGUAGE}_rules_scored.tsv', sep='\t')
 
         rules_max = pruning.prune_rules(rules, SCORE_TYPE)
         rules_max.to_csv(
-            Path('../data') / f'{LANGUAGE}_rules_pruned_{SCORE_TYPE}.tsv',
+            OUT_DIR / f'{LANG_FAMILY}/{LANGUAGE}_rules_pruned_{SCORE_TYPE}.tsv',
             sep='\t',
             index=False)
 
-    # Predict wug-test ratings
-    if args.rate_wugs:
-        rules = pd.read_csv(
-            Path('../data') / f'{LANGUAGE}_rules_pruned_{SCORE_TYPE}.tsv',
-            sep='\t')
-        print(rules)
-
-        splits = ['dev', 'tst']  # Sigmorphon2021
-        if LANGUAGE in ['eng', 'eng2', 'eng3']:
-            splits.append('albrighthayes')
-
-        for split in splits:
-            wugs = getattr(config, f'wug_{split}')
-            wug_ratings = wug_testing.rate_wugs(wugs, rules, SCORE_TYPE)
-            wug_ratings = pd.DataFrame(
-                wug_ratings,
-                columns=['stem', 'output', 'model_rating', 'rule_idx'])
-            wug_ratings = wug_ratings.merge(wugs, how='right')
-            wug_ratings.to_csv(
-                Path('../data') /
-                f'{LANGUAGE}_wug_{split}_predict_{SCORE_TYPE}.tsv',
-                sep='\t',
-                index=False)
-
-    # Generate wug items just beyond the scope of irregular rules
-    if args.near_miss:
-        rules = pd.read_csv(
-            Path('../data') / f'{LANGUAGE}_rules_pruned_{SCORE_TYPE}.tsv',
-            sep='\t')
-        near_miss.generate_wugs(rules)
-
 
 if __name__ == "__main__":
-    main()
+    parser = configargparse.ArgParser(
+        config_file_parser_class=configargparse.YAMLConfigFileParser)
+    parser.add(
+        '--language_family',
+        type=str,
+        choices=['polynesian'],
+        default='polynesian')
+    parser.add(
+        '--language',
+        type=str,
+        default='ALL')
+    parser.add(
+        '--learn_rules',
+        action='store_true',
+        default=True,
+        help='recursive minimal generalization')
+    parser.add(
+        '--cross_contexts',
+        action='store_true',
+        default=False,
+        help='make cross-context base rules (aka dopplegangers)')
+    parser.add(
+        '--score_rules',
+        action='store_true',
+        default=True,
+        help='confidence or accuracy')
+    parser.add(
+        '--prune_rules',
+        action='store_true',
+        default=True,
+        help='maximal rules by generality, score, and length')
+    parser.add(
+        '--score_type',
+        type=str,
+        choices=['confidence', 'accuracy'],
+        default='confidence')
+    parser.add(
+        '--accuracy_smooth',
+        type=float,
+        default=10.0,
+        help='denominator for smoothed accuracy')
+    parser.add(
+        '--data_dir',
+        type=str,
+        default='data'
+    )
+    parser.add(
+        '--out_dir',
+        type=str,
+        default='output'
+    )
+
+    args = parser.parse_args()
+
+    LANG_FAMILY = args.language_family
+    DATA_DIR = Path(args.data_dir)
+
+    # Import config (as created by 01_prepare_data)
+    config_save = pd.read_pickle(
+        open(DATA_DIR / f'{LANG_FAMILY}_config.pkl', 'rb'))
+    for key, val in config_save.items():
+        setattr(config, key, val)
+    phon_config.init(config_save)
+
+    if args.language == 'ALL':
+        langs = config.dat_train['language'].unique()
+        for lang in langs:
+            generate_rules(args, lang=lang)
+    else:
+        generate_rules(args)

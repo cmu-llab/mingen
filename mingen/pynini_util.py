@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import re
 import pynini
 from pynini import Arc, Fst, SymbolTable
@@ -164,6 +166,87 @@ def rewrites(rule, inpt, outpt, sigstar=None, symtable=None):
         in_scope = 1
         pred = str_util.remove(pred, markers)
         hit = int(pred == outpt)
+    return {'in_scope': in_scope, 'hit': hit}
+
+
+def unit_rewrites(rule, rule_type, inpt, inpt_aligned, outpt, sigstar=None, symtable=None):
+    """
+    Determines whether inpt is within scope of rule and
+    if so whether application results in outpt
+    """
+    if isinstance(rule, Fst):
+        rule_fst = rule
+    else:
+        (A, B, C, D) = rule
+        rule_fst = compile_rule(A, B, C, D, sigstar, symtable)
+
+    if isinstance(inpt, Fst):
+        inpt_fst = inpt
+    else:
+        inpt_fst = accep(inpt, symtable)
+
+    pred_fst = inpt_fst @ rule_fst
+    strpath_iter = pred_fst.paths(
+        input_token_type=symtable, output_token_type=symtable)
+    preds = [x for x in strpath_iter.ostrings()]
+    if len(preds) > 1:
+        print(preds)
+        raise ValueError("len preds > 1?")
+    pred = preds[0]
+
+    idxs = [i for i, char in enumerate(pred.replace('⟩', '').split()) if char == '⟨']
+    idxs = [idx - i for i, idx in enumerate(idxs)]
+    in_scope = len(idxs)
+    hit = 0
+    pred_clean = str_util.remove(pred, markers)
+    pred_clean = pred_clean.split()
+    inpt_aligned = inpt_aligned.split()
+    outpt = outpt.split()
+    # find indices of instances of null in inpt_aligned
+    # if subst: insert null in proper locations in output of rule fst
+    # if ins: align output of rule fst with inpt_aligned, check locations of matched insertions
+    # if del: align output of rule fst with inpt_aligned, ignore matched nulls, check location of nulls against output
+    # print(idxs)
+    # print(rule_type, pred_clean, inpt_aligned, outpt)
+    if rule_type == 'sub':
+        shift = 0
+        for i, char in enumerate(inpt_aligned):
+            if pred_clean[i + shift] == outpt[i] and i + shift in idxs:
+                hit += 1
+            if char == '∅':
+                shift -= 1
+    elif rule_type == 'ins':
+        shift = 0
+        for i, char in enumerate(inpt_aligned):
+            if char != pred_clean[i + shift]:
+                if char == '∅' and pred_clean[i + shift] == outpt[i] and i + shift in idxs:
+                    hit += 1
+                elif char == '∅' and i + shift not in idxs:
+                    shift -= 1
+                elif char == '∅':
+                    pass
+                else:
+                    shift += 1
+        if len(inpt_aligned) + shift != len(pred_clean):
+            print("shift mismatch", shift, len(inpt_aligned), len(pred_clean))
+            print(pred_clean, inpt_aligned, outpt)
+            print(idxs, hit, in_scope)
+        # for idx in idxs:
+        #     if inpt_aligned[idx + shift] == '∅' and pred_clean[idx] == outpt[idx + shift]:
+        #         hit += 1
+        #     else:
+        #         shift -= 1
+    elif rule_type == 'del':
+        shift = 0
+        for i, char in enumerate(inpt_aligned):
+            if char != pred_clean[i + shift]:
+                if outpt[i] == '∅' and i + shift in idxs:
+                    hit += 1
+                shift -= 1
+        if len(inpt_aligned) + shift != len(pred_clean):
+            print("shift mismatch", shift, len(inpt_aligned), len(pred_clean))
+    else:
+        raise ValueError("invalid rule type")
     return {'in_scope': in_scope, 'hit': hit}
 
 
