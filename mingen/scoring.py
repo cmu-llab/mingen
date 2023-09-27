@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import sys
 import numpy as np
 from scipy.stats import t as student_t
@@ -12,7 +10,7 @@ import pynini_util
 verbosity = 0
 
 
-def score_rules(R, lang=None):
+def score_rules(R):
     """
     Hits and scope for FtrRules on training data
     todo: apply simultaneously to all inputs encoded as trie?
@@ -23,14 +21,10 @@ def score_rules(R, lang=None):
 
     # Precompile inputs to FSTs
     dat = config.dat_train
-    if lang is not None:
-        dat = dat[dat['language'] == lang]
-    print("data len:", len(dat))
-    stems = [str(x).replace('∅ ', '') for x in dat['stem']]
-    stems_aligned = [str(x) for x in dat['stem']]
+    stems = [str(x) for x in dat['stem']]
     outputs = [str(x) for x in dat['output']]
     stem_ids = list(range(len(dat)))
-    wordforms = list(zip(stems, stems_aligned, outputs, stem_ids))
+    wordforms = list(zip(stems, outputs, stem_ids))
     stem_fsts = pynini_util.accep(stems, symtable)
 
     # Hits and scope for each rule
@@ -58,25 +52,18 @@ def score_rules(R, lang=None):
         # Compile rule to FST
         rule_fst = pynini_util.compile_rule(A, B, C, D, sigstar, symtable)
 
-        if A == '∅' and B == '∅':
-            raise ValueError("both input and output are empty")
-        elif A == '∅':
-            rule_type = 'ins'
-        elif B == '∅':
-            rule_type = 'del'
-        else:
-            rule_type = 'sub'
-
         # Loop over input/output pairs in data subset
         hits, scope = 0.0, 0.0
-        for (stem, stem_aligned, output, stem_id) in subdat:
+        for (stem, output, stem_id) in subdat:
             stem_fst = stem_fsts[stem_id]
-            # rewrite_val = pynini_util.rewrites(rule_fst, stem_fst, output, sigstar, symtable)
-            rewrite_val = pynini_util.unit_rewrites(rule_fst, rule_type, stem_fst, stem_aligned, output, sigstar, symtable)
+            rewrite_val = pynini_util.rewrites(rule_fst, stem_fst, output,
+                                               sigstar, symtable)
             #print(rule.regexes())
             #print(stem, '->', output, rewrite_val)
-            scope += rewrite_val['in_scope']
-            hits += rewrite_val['hit']
+            if rewrite_val['in_scope']:
+                scope += 1.0
+            if rewrite_val['hit']:
+                hits += 1.0
 
         hits_all[idx] = hits
         scope_all[idx] = scope
@@ -104,11 +91,8 @@ def confidence(hits, scope, alpha=0.55):
     # Adjusted reliability
     p_star = (hits + 0.5) / (scope + 1.0)
     # Estimated variance
-    try:
-        var_est = (p_star * (1 - p_star)) / scope
-        var_est = var_est**0.5
-    except ZeroDivisionError:
-        var_est = np.infty
+    var_est = (p_star * (1 - p_star)) / scope
+    var_est = var_est**0.5
     # Confidence
     z = student_t.ppf(alpha, scope - 1.0)
     c = p_star - z * var_est
