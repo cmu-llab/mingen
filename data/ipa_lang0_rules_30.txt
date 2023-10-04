@@ -1,0 +1,30 @@
+1	[-syl +nas] > m /  _ b
+2	∅ > p / [+syl] m _ [-syl -son +cont -delrel]
+3	[+syl +long] > [+syl -long] /  _ 
+4	[+syl -round] > [+syl +round] /  _ [+syl +round]
+5	[-syl -son -cont -delrel +voi] > [-syl -son +cont -delrel +voi] / [+syl] _ [+syl]
+6	[+syl +back] > [+syl -back] /  _ [+syl -back]
+7	h > ∅ /  _ #
+8	[-syl +son -nas] > ∅ /  _ [-syl]
+9	[-syl -son] > [-syl -son -voi] /  _ #
+10	[-syl +nas] > ŋ /  _ ɡ
+11	[-syl -son +cont -delrel -voi] > h / [+syl] _ [+syl]
+12	[-syl -son -cont -delrel +voi] > j / [+syl] _ [+syl]
+13	h > ∅ / [+syl] _ [+syl]
+14	[-son] > [-son -voi] /  _ [-syl -voi]
+15	ʔ > ∅ /  _ #
+16	d > ɺ / [+syl] _ [+syl]
+17	[-syl +nas] > n /  _ d
+18	d > ɾ / [+syl] _ [+syl]
+19	[+syl -back] > [+syl +back] /  _ [+syl +back]
+20	[+syl -hi -lo] > [+syl +hi -lo] /  _ [+syl +hi]
+21	[-syl -son +cont -delrel] > [-syl -son +cont -delrel +voi] / [+syl] _ [+syl]
+22	[-syl +son -nas] > j / [+syl] _ [+syl]
+23	∅ > ɡ / [+syl] ŋ _ [-syl +son -nas]
+24	∅ > ə / # _ [-syl -son] [-syl -son]
+25	[-syl -son +cont -delrel] > [-syl -son +cont -delrel -voi] /  _ #
+26	[-syl -son -cont -delrel -voi] > ʔ / # _ [+syl]
+27	∅ > b / [+syl] m _ [-syl +son -nas]
+28	[-syl -son -cont -delrel] > [-syl -son -cont -delrel +voi] / [+syl] _ [+syl]
+29	[-syl -son -cont -delrel -voi] > ʔ / [+syl] _ [+syl]
+30	[-syl -son -cont -delrel] > [-syl -son -cont -delrel -voi] /  _ #

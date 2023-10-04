@@ -1,0 +1,15 @@
+1	∅ > ə / # _ [-syl -son] [-syl -son]
+2	[+syl -hi -lo] > [+syl -hi +lo] /  _ [+syl +lo]
+3	[+syl -back] > [+syl +back] /  _ [+syl +back]
+4	[+syl +back] > [+syl -back] /  _ [+syl -back]
+5	[-syl -son -cont -delrel +voi] > j / [+syl] _ [+syl]
+6	∅ > ə / [-syl -son +cont -delrel] _ [-syl +son]
+7	[-syl +nas] > n /  _ t
+8	[-syl -son] > [-syl -son -voi] /  _ #
+9	∅ > t / [+syl] n _ [-syl -son +cont -delrel]
+10	∅ > d / [+syl] n _ [-syl +son -nas]
+11	[-son] > [-son +voi] / [-syl +voi] _ 
+12	[-syl +son -nas] > j / [+syl] _ [+syl]
+13	[-syl +nas] > m /  _ b
+14	[-syl] > ∅ /  _ [-syl]
+15	[-syl +long] > [-syl -long] /  _ 
