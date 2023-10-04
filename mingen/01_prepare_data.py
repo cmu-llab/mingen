@@ -12,7 +12,7 @@ config.epsilon = 'ϵ'
 config.bos = '⋊'
 config.eos = '⋉'
 config.zero = '∅'
-config.save_dir = Path(__file__).parent / 'data'
+config.save_dir = Path(__file__).parent.parent / 'data'
 phon_config.init(config)
 
 
@@ -46,13 +46,13 @@ parser = configargparse.ArgParser(
 parser.add(
     '--alignment_filename',
     type=str,
-    default="../alignment/output/alignment_new_in_pickle"
+    default="data/synth_eng_30.tsv"
 )
 parser.add(
     '--language_family',
     type=str,
-    choices=['polynesian'],
-    default='polynesian')
+    choices=['english'],
+    default='english')
 args = parser.parse_args()
 ALIGN_FILE = args.alignment_filename
 LANG_FAMILY = args.language_family
@@ -65,12 +65,12 @@ config.remove_prefix = None
 # # # # # # # # # #
 # Train
 fdat = ALIGN_FILE
-with open(fdat, 'rb') as f:
-    dat_lines = pickle.load(f)
-dat_lines = [(' '.join(src), ' '.join(tgt), lang) for tgt, src, lang in dat_lines]
-dat = pd.DataFrame(dat_lines, columns=['wordform1', 'wordform2', 'language'])
-# dat = pd.read_csv(fdat, sep='\t', header=None,
-#                   names=['wordform1', 'wordform2', 'language'])
+# with open(fdat, 'rb') as f:
+#     dat_lines = pickle.load(f)
+# dat_lines = [(' '.join(src), ' '.join(tgt), lang) for src, tgt, lang in dat_lines]
+# dat = pd.DataFrame(dat_lines, columns=['wordform1', 'wordform2', 'language'])
+dat = pd.read_csv(fdat, sep='\t', header=None,
+                  names=['wordform1', 'wordform2'])
 dat['wordform1'] = dat['wordform1'].apply(segment_string)
 dat['wordform2'] = dat['wordform2'].apply(segment_string)
 # special_sym = [r'\*', 'ʰ', '̃', '̆', '̈', '̣', '̥', r'\(', r'\.', r'0', r'\<', r'\?', 'q', r'\|', 'ʔ', '͡', 'β', '’']  # removing temporarily, should deal with them before alignment
@@ -102,7 +102,7 @@ print()
 
 # Import features from file
 feature_matrix = features.import_features(
-    Path(__file__).parent / f'data/{LANG_FAMILY}.ftr',
+    Path(__file__).parent.parent / f'data/features.ftr',
     segments)
 
 # Fix up features for mingen

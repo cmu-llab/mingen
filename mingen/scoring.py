@@ -23,8 +23,8 @@ def score_rules(R, lang=None):
 
     # Precompile inputs to FSTs
     dat = config.dat_train
-    if lang is not None:
-        dat = dat[dat['language'] == lang]
+    # if lang is not None:
+    #     dat = dat[dat['language'] == lang]
     print("data len:", len(dat))
     stems = [str(x).replace('∅ ', '') for x in dat['stem']]
     stems_aligned = [str(x) for x in dat['stem']]

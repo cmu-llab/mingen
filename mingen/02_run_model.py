@@ -31,9 +31,9 @@ def generate_rules(args, lang=None):
     # Make word-specific (base) rules, apply recursive minimal generalization
     if args.learn_rules:
         dat_train = config.dat_train
-        if LANGUAGE not in dat_train['language'].unique():
-            raise ValueError(f"language {LANGUAGE} cannot be found in train data")
-        dat_train = dat_train[dat_train['language'] == LANGUAGE]
+        # if LANGUAGE not in dat_train['language'].unique():
+        #     raise ValueError(f"language {LANGUAGE} cannot be found in train data")
+        # dat_train = dat_train[dat_train['language'] == LANGUAGE]
         print('Base rules ...')
         # R_base = [base_rule(w1, w2) for (w1, w2) in zip(dat_train['stem'], dat_train['output'])]
         R_base = [rule for (w1, w2) in zip(dat_train['stem'], dat_train['output']) for rule in unit_base_rules(w1, w2)]
@@ -114,12 +114,12 @@ if __name__ == "__main__":
     parser.add(
         '--language_family',
         type=str,
-        choices=['polynesian'],
-        default='polynesian')
+        choices=['english'],
+        default='english')
     parser.add(
         '--language',
         type=str,
-        default='ALL')
+        default='english')
     parser.add(
         '--learn_rules',
         action='store_true',
@@ -173,9 +173,10 @@ if __name__ == "__main__":
         setattr(config, key, val)
     phon_config.init(config_save)
 
-    if args.language == 'ALL':
-        langs = config.dat_train['language'].unique()
-        for lang in langs:
-            generate_rules(args, lang=lang)
-    else:
-        generate_rules(args)
+    generate_rules(args)
+    # if args.language == 'ALL':
+    #     langs = config.dat_train['language'].unique()
+    #     for lang in langs:
+    #         generate_rules(args, lang=lang)
+    # else:
+    #     generate_rules(args)
